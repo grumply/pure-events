@@ -1,4 +1,5 @@
-{-# LANGUAGE CPP, PatternSynonyms, ViewPatterns, OverloadedStrings #-}
+{-# LANGUAGE CPP, PatternSynonyms, ViewPatterns, OverloadedStrings,
+   FlexibleContexts, ScopedTypeVariables #-}
 module Pure.Data.Events where
 
 import Pure.Data.Default
@@ -9,6 +10,7 @@ import Pure.Data.Txt (Txt)
 import Pure.Data.Lifted ((.#),Evt(..),Options(..),JSV)
 
 import Control.Monad (join)
+import Data.Coerce
 import Data.Foldable (traverse_)
 
 pattern On :: Txt -> (Evt -> IO ()) -> Listener
@@ -215,8 +217,8 @@ pattern OnInput f a = Listener (On "input" f) a
 pattern OnInputWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
 pattern OnInputWith opts f a = Listener (OnWith opts "input" f) a
 
-withInput :: (Txt -> IO ()) -> (Evt -> IO ())
-withInput f = traverse_ f . join . fmap (.# "value") . (.# "target") . evtObj
+withInput :: forall a. Coercible Txt a => (a -> IO ()) -> (Evt -> IO ())
+withInput f = traverse_ (f . (coerce :: Txt -> a)) . join . fmap (.# "value") . (.# "target") . evtObj
 
 pattern OnChange :: HasFeatures a => (Evt -> IO ()) -> a -> a
 pattern OnChange f a = Listener (On "change" f) a
@@ -224,8 +226,8 @@ pattern OnChange f a = Listener (On "change" f) a
 pattern OnChangeWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
 pattern OnChangeWith opts f a = Listener (OnWith opts "change" f) a
 
-withValue :: (Txt -> IO ()) -> (Evt -> IO ())
-withValue f = traverse_ f . join . fmap (.# "value") . (.# "target") . evtObj
+withValue :: forall a. Coercible Txt a => (a -> IO ()) -> (Evt -> IO ())
+withValue f = traverse_ (f . (coerce :: Txt -> a)) . join . fmap (.# "value") . (.# "target") . evtObj
 
 pattern OnCheck :: HasFeatures a => (Evt -> IO ()) -> a -> a
 pattern OnCheck f a = Listener (On "change" f) a
