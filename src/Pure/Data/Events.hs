@@ -7,260 +7,297 @@ import qualified Pure.Data.View as V (Listener(..))
 import Pure.Data.View hiding (On)
 import Pure.Data.View.Patterns
 import Pure.Data.Txt (Txt)
-import Pure.Data.Lifted ((.#),Evt(..),Options(..),JSV)
+import Pure.Data.Lifted ((.#),Evt(..),Options(..),JSV,IsNode(..))
 
+import Control.Arrow ((&&&))
 import Control.Monad (join)
 import Data.Coerce
 import Data.Foldable (traverse_)
 
-pattern On :: Txt -> (Evt -> IO ()) -> Listener
-pattern On ev f <- (V.On ev ElementTarget _ f _) where
-  On ev f = V.On ev ElementTarget def f (return ())
+--------------------------------------------------------------------------------
+-- Core Listener Patterns
 
-pattern OnWith :: Options -> Txt -> (Evt -> IO ()) -> Listener
-pattern OnWith opts ev f <- (V.On ev ElementTarget opts f _) where
-  OnWith opts ev f = V.On ev ElementTarget opts f (return ())
+pattern On :: HasFeatures a => Txt -> (Evt -> IO ()) -> a -> a
+pattern On ev f a <- Listener (V.On ev ElementTarget _ f _) a where
+  On ev f a = Listener (V.On ev ElementTarget def f (return ())) a
 
-pattern OnDoc :: Txt -> (Evt -> IO ()) -> Listener
-pattern OnDoc ev f <- (V.On ev DocumentTarget _ f _) where
-  OnDoc ev f = V.On ev DocumentTarget def f (return ())
+pattern OnWith :: HasFeatures a => Options -> Txt -> (Evt -> IO ()) -> a -> a
+pattern OnWith opts ev f a <- Listener (V.On ev ElementTarget opts f _) a where
+  OnWith opts ev f a = Listener (V.On ev ElementTarget opts f (return ())) a
 
-pattern OnDocWith :: Options -> Txt -> (Evt -> IO ()) -> Listener
-pattern OnDocWith opts ev f <- (V.On ev DocumentTarget opts f _) where
-  OnDocWith opts ev f = V.On ev DocumentTarget opts f (return ())
+pattern OnDoc :: HasFeatures a => Txt -> (Evt -> IO ()) -> a -> a
+pattern OnDoc ev f a <- Listener (V.On ev DocumentTarget _ f _) a where
+  OnDoc ev f a = Listener (V.On ev DocumentTarget def f (return ())) a
 
-pattern OnWin :: Txt -> (Evt -> IO ()) -> Listener
-pattern OnWin ev f <- (V.On ev WindowTarget _ f _) where
-  OnWin ev f = V.On ev WindowTarget def f (return ())
+pattern OnDocWith :: HasFeatures a => Options -> Txt -> (Evt -> IO ()) -> a -> a
+pattern OnDocWith opts ev f a <- Listener (V.On ev DocumentTarget opts f _) a where
+  OnDocWith opts ev f a = Listener (V.On ev DocumentTarget opts f (return ())) a
 
-pattern OnWinWith :: Options -> Txt -> (Evt -> IO ()) -> Listener
-pattern OnWinWith opts ev f <- (V.On ev WindowTarget opts f _) where
-  OnWinWith opts ev f = V.On ev WindowTarget opts f (return ())
+pattern OnWin :: HasFeatures a => Txt -> (Evt -> IO ()) -> a -> a
+pattern OnWin ev f a <- Listener (V.On ev WindowTarget _ f _) a where
+  OnWin ev f a = Listener (V.On ev WindowTarget def f (return ())) a
 
-preventedDefault :: Listener -> (Bool,Listener)
-preventedDefault f@(V.On _ _ (Options True _ _) _ _) = (True,f)
-
-preventDefault :: Listener -> Listener
-preventDefault (V.On ev t os f s) = V.On ev t (os { preventDef = True, passive = False }) f s
-
-pattern PreventDefault :: Listener -> Listener
-pattern PreventDefault f <- (preventedDefault -> (True,f)) where
-  PreventDefault f = preventDefault f
-
-stoppedPropagation :: Listener -> (Bool,Listener)
-stoppedPropagation f@(V.On _ _ (Options _ True _) _ _) = (True,f)
-
-stopPropagation :: Listener -> Listener
-stopPropagation (V.On ev t os f s) = V.On ev t (os { stopProp = True }) f s
-
-pattern StopPropagation :: Listener -> Listener
-pattern StopPropagation f <- (stoppedPropagation -> (True,f)) where
-  StopPropagation f = stopPropagation f
-
-intercepted :: Listener -> (Bool,Listener)
-intercepted f@(V.On _ _ (Options True True _) _ _) = (True,f)
-
-intercept :: Listener -> Listener
-intercept (V.On ev t os f s) = V.On ev t (os { preventDef = True, stopProp = True, passive = False }) f s
-
-pattern Intercept :: Listener -> Listener
-pattern Intercept f <- (intercepted -> (True,f)) where
-  Intercept f = intercept f
+pattern OnWinWith :: HasFeatures a => Options -> Txt -> (Evt -> IO ()) -> a -> a
+pattern OnWinWith opts ev f a <- Listener (V.On ev WindowTarget opts f _) a where
+  OnWinWith opts ev f a = Listener (V.On ev WindowTarget opts f (return ())) a
 
 ----------------------------------------
 -- Window events
 
 pattern OnResize :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnResize f a = Listener (OnWin "resize" f) a
+pattern OnResize f a = OnWin "resize" f a
 
 pattern OnResizeWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnResizeWith opts f a = Listener (OnWinWith opts "resize" f) a
+pattern OnResizeWith opts f a = OnWinWith opts "resize" f a
 
 pattern OnScroll :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnScroll f a = Listener (OnWin "scroll" f) a
+pattern OnScroll f a = OnWin "scroll" f a
 
 pattern OnScrollWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnScrollWith opts f a = Listener (OnWinWith opts "scroll" f) a
+pattern OnScrollWith opts f a = OnWinWith opts "scroll" f a
 
 pattern OnClose :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnClose f a = Listener (OnWin "close" f) a
+pattern OnClose f a = OnWin "close" f a
 
 pattern OnCloseWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnCloseWith opts f a = Listener (OnWinWith opts "close" f) a
+pattern OnCloseWith opts f a = OnWinWith opts "close" f a
 
 pattern OnBeforeUnload :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnBeforeUnload f a = Listener (OnWin "beforeunload" f) a
+pattern OnBeforeUnload f a = OnWin "beforeunload" f a
 
 pattern OnBeforeUnloadWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnBeforeUnloadWith opts f a = Listener (OnWinWith opts "beforeunload" f) a
+pattern OnBeforeUnloadWith opts f a = OnWinWith opts "beforeunload" f a
 
 ----------------------------------------
--- Element events
+-- Mouse/Touch
 
 pattern OnClick :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnClick f a = Listener (On "click" f) a
+pattern OnClick f a = On "click" f a
 
 pattern OnClickWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnClickWith opts f a = Listener (OnWith opts "click" f) a
+pattern OnClickWith opts f a = OnWith opts "click" f a
 
 pattern OnDoubleClick :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnDoubleClick f a = Listener (On "dblclick" f) a
+pattern OnDoubleClick f a = On "dblclick" f a
 
 pattern OnDoubleClickWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnDoubleClickWith opts f a = Listener (OnWith opts "dblclick" f) a
+pattern OnDoubleClickWith opts f a = OnWith opts "dblclick" f a
 
 pattern OnMouseDown :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnMouseDown f a = Listener (On "mousedown" f) a
+pattern OnMouseDown f a = On "mousedown" f a
 
 pattern OnMouseDownWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnMouseDownWith opts f a = Listener (OnWith opts "mousedown" f) a
+pattern OnMouseDownWith opts f a = OnWith opts "mousedown" f a
 
 pattern OnMouseUp :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnMouseUp f a = Listener (On "mouseup" f) a
+pattern OnMouseUp f a = On "mouseup" f a
 
 pattern OnMouseUpWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnMouseUpWith opts f a = Listener (OnWith opts "mouseup" f) a
+pattern OnMouseUpWith opts f a = OnWith opts "mouseup" f a
 
 pattern OnTouchStart :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnTouchStart f a = Listener (On "touchstart" f) a
+pattern OnTouchStart f a = On "touchstart" f a
 
 pattern OnTouchStartWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnTouchStartWith opts f a = Listener (OnWith opts "touchstart" f) a
+pattern OnTouchStartWith opts f a = OnWith opts "touchstart" f a
 
 pattern OnTouchEnd :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnTouchEnd f a = Listener (On "touchend" f) a
+pattern OnTouchEnd f a = On "touchend" f a
 
 pattern OnTouchEndWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnTouchEndWith opts f a = Listener (OnWith opts "touchend" f) a
+pattern OnTouchEndWith opts f a = OnWith opts "touchend" f a
 
 pattern OnMouseEnter :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnMouseEnter f a = Listener (On "mouseenter" f) a
+pattern OnMouseEnter f a = On "mouseenter" f a
 
 pattern OnMouseEnterWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnMouseEnterWith opts f a = Listener (OnWith opts "mouseenter" f) a
+pattern OnMouseEnterWith opts f a = OnWith opts "mouseenter" f a
 
 pattern OnMouseLeave :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnMouseLeave f a = Listener (On "mouseleave" f) a
+pattern OnMouseLeave f a = On "mouseleave" f a
 
 pattern OnMouseLeaveWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnMouseLeaveWith opts f a = Listener (OnWith opts "mouseleave" f) a
+pattern OnMouseLeaveWith opts f a = OnWith opts "mouseleave" f a
 
 pattern OnMouseOver :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnMouseOver f a = Listener (On "mouseover" f) a
+pattern OnMouseOver f a = On "mouseover" f a
 
 pattern OnMouseOverWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnMouseOverWith opts f a = Listener (OnWith opts "mouseover" f) a
+pattern OnMouseOverWith opts f a = OnWith opts "mouseover" f a
 
 pattern OnMouseOut :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnMouseOut f a = Listener (On "mouseout" f) a
+pattern OnMouseOut f a = On "mouseout" f a
 
 pattern OnMouseOutWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnMouseOutWith opts f a = Listener (OnWith opts "mouseout" f) a
+pattern OnMouseOutWith opts f a = OnWith opts "mouseout" f a
 
 pattern OnMouseMove :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnMouseMove f a = Listener (On "mousemove" f) a
+pattern OnMouseMove f a = On "mousemove" f a
 
 pattern OnMouseMoveWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnMouseMoveWith opts f a = Listener (OnWith opts "mousemove" f) a
+pattern OnMouseMoveWith opts f a = OnWith opts "mousemove" f a
 
 pattern OnTouchMove :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnTouchMove f a = Listener (On "touchmove" f) a 
+pattern OnTouchMove f a = On "touchmove" f a 
 
 pattern OnTouchMoveWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnTouchMoveWith opts f a = Listener (OnWith opts "touchmove" f) a 
+pattern OnTouchMoveWith opts f a = OnWith opts "touchmove" f a 
 
 pattern OnTouchCancel :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnTouchCancel f a = Listener (On "touchcancel" f) a
+pattern OnTouchCancel f a = On "touchcancel" f a
 
 pattern OnTouchCancelWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnTouchCancelWith opts f a = Listener (OnWith opts "touchcancel" f) a
+pattern OnTouchCancelWith opts f a = OnWith opts "touchcancel" f a
 
-pattern OnSubmit :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnSubmit f a = Listener (On "submit" f) a
-
-pattern OnSubmitWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnSubmitWith opts f a = Listener (OnWith opts "submit" f) a
+--------------------------------------------------------------------------------
+-- Focus/Blur
 
 pattern OnBlur :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnBlur f a = Listener (On "blur" f) a
+pattern OnBlur f a = On "blur" f a
 
 pattern OnBlurWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnBlurWith opts f a = Listener (OnWith opts "blur" f) a
+pattern OnBlurWith opts f a = OnWith opts "blur" f a
 
 pattern OnFocus :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnFocus f a = Listener (On "focus" f) a
+pattern OnFocus f a = On "focus" f a
 
 pattern OnFocusWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnFocusWith opts f a = Listener (OnWith opts "focus" f) a
+pattern OnFocusWith opts f a = OnWith opts "focus" f a
 
-pattern OnKeyUp :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnKeyUp f a = Listener (On "keyup" f) a
-
-pattern OnKeyUpWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnKeyUpWith opts f a = Listener (OnWith opts "keyup" f) a
-
-pattern OnKeyDown :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnKeyDown f a = Listener (On "keydown" f) a
-
-pattern OnKeyDownWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnKeyDownWith opts f a = Listener (OnWith opts "keydown" f) a
-
-pattern OnKeyPress :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnKeyPress f a = Listener (On "keypress" f) a
-
-pattern OnKeyPressWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnKeyPressWith opts f a = Listener (OnWith opts "keypress" f) a
+--------------------------------------------------------------------------------
+-- Inputs
 
 pattern OnInput :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnInput f a = Listener (On "input" f) a
+pattern OnInput f a = On "input" f a
 
 pattern OnInputWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnInputWith opts f a = Listener (OnWith opts "input" f) a
-
-withInput :: forall a. Coercible Txt a => (a -> IO ()) -> (Evt -> IO ())
-withInput f = traverse_ (f . (coerce :: Txt -> a)) . join . fmap (.# "value") . (.# "target") . evtObj
+pattern OnInputWith opts f a = OnWith opts "input" f a
 
 pattern OnChange :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnChange f a = Listener (On "change" f) a
+pattern OnChange f a = On "change" f a
 
 pattern OnChangeWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnChangeWith opts f a = Listener (OnWith opts "change" f) a
-
-withValue :: forall a. Coercible Txt a => (a -> IO ()) -> (Evt -> IO ())
-withValue f = traverse_ (f . (coerce :: Txt -> a)) . join . fmap (.# "value") . (.# "target") . evtObj
+pattern OnChangeWith opts f a = OnWith opts "change" f a
 
 pattern OnCheck :: HasFeatures a => (Evt -> IO ()) -> a -> a
-pattern OnCheck f a = Listener (On "change" f) a
+pattern OnCheck f a = On "change" f a
 
 pattern OnCheckWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
-pattern OnCheckWith opts f a = Listener (OnWith opts "change" f) a
+pattern OnCheckWith opts f a = OnWith opts "change" f a
 
-withChecked :: (Bool -> IO ()) -> (Evt -> IO ())
-withChecked f = traverse_ f . join . fmap (.# "checked") . (.# "target") . evtObj
+pattern OnSubmit :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnSubmit f a = On "submit" f a
 
--- Helpers
-
-relatedTarget :: Evt -> Maybe JSV
-relatedTarget = (.# "relatedTarget") . evtObj
-
-pattern RelatedTarget t <- (relatedTarget -> Just t)
+pattern OnSubmitWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnSubmitWith opts f a = OnWith opts "submit" f a
 
 --------------------------------------------------------------------------------
 -- Keys
 
+pattern OnKeyUp :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnKeyUp f a = On "keyup" f a
+
+pattern OnKeyUpWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnKeyUpWith opts f a = OnWith opts "keyup" f a
+
+pattern OnKeyDown :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnKeyDown f a = On "keydown" f a
+
+pattern OnKeyDownWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnKeyDownWith opts f a = OnWith opts "keydown" f a
+
+pattern OnKeyPress :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnKeyPress f a = On "keypress" f a
+
+pattern OnKeyPressWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnKeyPressWith opts f a = OnWith opts "keypress" f a
+
+--------------------------------------------------------------------------------
+-- Event Helpers
+
+passive :: Options
+passive = Options False False True
+
+intercept :: Options
+intercept = Options True True False
+
+nodefault :: Options
+nodefault = Options True False False
+
+noprop :: Options
+noprop = Options False True False
+
+withInput :: forall a. Coercible Txt a => (a -> IO ()) -> (Evt -> IO ())
+withInput f = traverse_ (f . (coerce :: Txt -> a)) . join . fmap (.# "value") . (.# "target") . evtObj
+
+-- same as withInput
+withValue :: forall a. Coercible Txt a => (a -> IO ()) -> (Evt -> IO ())
+withValue f = traverse_ (f . (coerce :: Txt -> a)) . join . fmap (.# "value") . (.# "target") . evtObj
+
+withChecked :: (Bool -> IO ()) -> (Evt -> IO ())
+withChecked f = traverse_ f . join . fmap (.# "checked") . (.# "target") . evtObj
+
 keyCode :: Evt -> Maybe Int
 keyCode = (.# "keyCode") . evtObj
 
-pattern Digit0 <- (keyCode -> Just 48)
-pattern Digit1 <- (keyCode -> Just 49)
-pattern Digit2 <- (keyCode -> Just 50)
-pattern Digit3 <- (keyCode -> Just 51)
-pattern Digit4 <- (keyCode -> Just 52)
-pattern Digit5 <- (keyCode -> Just 53)
-pattern Digit6 <- (keyCode -> Just 54)
-pattern Digit7 <- (keyCode -> Just 55)
-pattern Digit8 <- (keyCode -> Just 56)
-pattern Digit9 <- (keyCode -> Just 57)
+clientY :: Evt -> Maybe Int
+clientY = (.# "clientY") . evtObj
+
+clientX :: Evt -> Maybe Int
+clientX = (.# "clientX") . evtObj
+
+screenY :: Evt -> Maybe Int
+screenY = (.# "screenY") . evtObj
+
+screenX :: Evt -> Maybe Int
+screenX = (.# "screenX") . evtObj
+
+shift :: Evt -> Maybe Bool
+shift = (.# "shiftKey") . evtObj
+
+alt :: Evt -> Maybe Bool
+alt = (.# "altKey") . evtObj
+
+ctrl :: Evt -> Maybe Bool
+ctrl = (.# "ctrlKey") . evtObj
+
+meta :: Evt -> Maybe Bool
+meta = (.# "metaKey") . evtObj
+
+button :: Evt -> Maybe Int
+button = (.# "button") . evtObj
+
+relatedTarget :: Evt -> Maybe JSV
+relatedTarget = (.# "relatedTarget") . evtObj
+
+pattern LeftButton e <- (button &&& id -> (Just 0,e))
+pattern MiddleButton e <- (button &&& id -> (Just 1,e))
+pattern RightButton e <- (button &&& id -> (Just 2,e))
+pattern BackButton e <- (button &&& id -> (Just 3,e))
+pattern ForwardButton e <- (button &&& id -> (Just 4,e))
+
+pattern RelatedTarget t <- (relatedTarget -> Just t)
+
+pattern ShiftKey o <- (shift &&& id -> (Just True,o))
+pattern AltKey o <- (alt &&& id -> (Just True,o))
+pattern CtrlKey o <- (ctrl &&& id -> (Just True,o))
+pattern MetaKey o <- (meta &&& id -> (Just True,o))
+
+pattern ClientY y e <- (clientY &&& id -> (Just y,e))
+pattern ClientX x e <- (clientX &&& id -> (Just x,e))
+pattern ScreenY y e <- (screenY &&& id -> (Just y,e))
+pattern ScreenX x e <- (screenX &&& id -> (Just x,e))
+
+pattern Key0 <- (keyCode -> Just 48)
+pattern Key1 <- (keyCode -> Just 49)
+pattern Key2 <- (keyCode -> Just 50)
+pattern Key3 <- (keyCode -> Just 51)
+pattern Key4 <- (keyCode -> Just 52)
+pattern Key5 <- (keyCode -> Just 53)
+pattern Key6 <- (keyCode -> Just 54)
+pattern Key7 <- (keyCode -> Just 55)
+pattern Key8 <- (keyCode -> Just 56)
+pattern Key9 <- (keyCode -> Just 57)
 
 pattern Keya <- (keyCode -> Just 97)
 pattern Keyb <- (keyCode -> Just 98)
@@ -418,16 +455,3 @@ pattern NumpadEnter <- (keyCode -> Just 13)
 pattern NumpadEqual <- (keyCode -> Just 12)
 pattern NumpadMultiply <- (keyCode -> Just 106)
 pattern NumpadSubtract <- (keyCode -> Just 109)
-
-shiftModifier o = ((.# "shiftKey") (evtObj o),o)
-pattern ShiftKey o <- (shiftModifier -> (Just True,o))
-
-altModifier o = ((.# "altKey") (evtObj o),o)
-pattern AltKey o <- (altModifier -> (Just True,o))
-
-ctrlModifier o = ((.# "ctrlKey") (evtObj o),o)
-pattern CtrlKey o <- (ctrlModifier -> (Just True,o))
-
-metaModifier o = ((.# "metaKey") (evtObj o),o)
-pattern MetaKey o <- (metaModifier -> (Just True,o))
-
