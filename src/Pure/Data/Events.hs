@@ -216,16 +216,16 @@ pattern OnKeyPressWith opts f a = OnWith opts "keypress" f a
 -- Event Helpers
 
 passive :: Options
-passive = Options False False True
+passive = Options False False True False
 
 intercept :: Options
-intercept = Options True True False
+intercept = Options True True False False
 
 nodefault :: Options
-nodefault = Options True False False
+nodefault = Options True False False False
 
 noprop :: Options
-noprop = Options False True False
+noprop = Options False True False False
 
 withInput :: forall a. Coercible Txt a => (a -> IO ()) -> (Evt -> IO ())
 withInput f = traverse_ (f . (coerce :: Txt -> a)) . join . fmap (.# "value") . (.# "target") . evtObj
