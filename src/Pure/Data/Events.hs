@@ -219,7 +219,7 @@ passive :: Options
 passive = Options False False True False
 
 intercept :: Options
-intercept = Options True True False False
+intercept = Options True True False True
 
 nodefault :: Options
 nodefault = Options True False False False
