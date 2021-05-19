@@ -83,6 +83,12 @@ pattern OnDoubleClick f a = On "dblclick" f a
 pattern OnDoubleClickWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
 pattern OnDoubleClickWith opts f a = OnWith opts "dblclick" f a
 
+pattern OnWheel :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnWheel f a = On "wheel" f a
+
+pattern OnWheelWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnWheelWith opts f a = OnWith opts "wheel" f a
+
 pattern OnMouseDown :: HasFeatures a => (Evt -> IO ()) -> a -> a
 pattern OnMouseDown f a = On "mousedown" f a
 
@@ -148,6 +154,27 @@ pattern OnTouchCancel f a = On "touchcancel" f a
 
 pattern OnTouchCancelWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
 pattern OnTouchCancelWith opts f a = OnWith opts "touchcancel" f a
+
+--------------------------------------------------------------------------------
+-- Gestures
+
+pattern OnGestureStart :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnGestureStart f a = On "gesturestart" f a
+
+pattern OnGestureStartWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnGestureStartWith opts f a = OnWith opts "gesturestart" f a
+
+pattern OnGestureChange :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnGestureChange f a = On "gesturechange" f a
+
+pattern OnGestureChangeWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnGestureChangeWith opts f a = OnWith opts "gesturechange" f a
+
+pattern OnGestureEnd :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnGestureEnd f a = On "gestureend" f a
+
+pattern OnGestureEndWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnGestureEndWith opts f a = OnWith opts "gestureend" f a
 
 --------------------------------------------------------------------------------
 -- Focus/Blur
