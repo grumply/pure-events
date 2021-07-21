@@ -191,6 +191,18 @@ pattern OnFocus f a = On "focus" f a
 pattern OnFocusWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
 pattern OnFocusWith opts f a = OnWith opts "focus" f a
 
+pattern OnFocusIn :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnFocusIn f a = On "focusin" f a
+
+pattern OnFocusInWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnFocusInWith opts f a = OnWith opts "focusin" f a
+
+pattern OnFocusOut :: HasFeatures a => (Evt -> IO ()) -> a -> a
+pattern OnFocusOut f a = On "focusout" f a
+
+pattern OnFocusOutWith :: HasFeatures a => Options -> (Evt -> IO ()) -> a -> a
+pattern OnFocusOutWith opts f a = OnWith opts "focusout" f a
+
 --------------------------------------------------------------------------------
 -- Inputs
 
