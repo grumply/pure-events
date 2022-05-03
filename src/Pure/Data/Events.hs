@@ -13,33 +13,34 @@ import Control.Arrow ((&&&))
 import Control.Monad (join)
 import Data.Coerce
 import Data.Foldable (traverse_)
+import Data.Maybe
 
 --------------------------------------------------------------------------------
 -- Core Listener Patterns
 
 pattern On :: HasFeatures a => Txt -> (Evt -> IO ()) -> a -> a
-pattern On ev f a <- Listener (V.On ev ElementTarget _ f _) a where
-  On ev f a = Listener (V.On ev ElementTarget def f (return ())) a
+pattern On ev f a <- Listener (V.On ev ElementTarget _ f _ _) a where
+  On ev f a = Listener (V.On ev ElementTarget def f (const (return ())) (return ())) a
 
 pattern OnWith :: HasFeatures a => Options -> Txt -> (Evt -> IO ()) -> a -> a
-pattern OnWith opts ev f a <- Listener (V.On ev ElementTarget opts f _) a where
-  OnWith opts ev f a = Listener (V.On ev ElementTarget opts f (return ())) a
+pattern OnWith opts ev f a <- Listener (V.On ev ElementTarget opts f _ _) a where
+  OnWith opts ev f a = Listener (V.On ev ElementTarget opts f (const (return ())) (return ())) a
 
 pattern OnDoc :: HasFeatures a => Txt -> (Evt -> IO ()) -> a -> a
-pattern OnDoc ev f a <- Listener (V.On ev DocumentTarget _ f _) a where
-  OnDoc ev f a = Listener (V.On ev DocumentTarget def f (return ())) a
+pattern OnDoc ev f a <- Listener (V.On ev DocumentTarget _ f _ _) a where
+  OnDoc ev f a = Listener (V.On ev DocumentTarget def f (const (return ())) (return ())) a
 
 pattern OnDocWith :: HasFeatures a => Options -> Txt -> (Evt -> IO ()) -> a -> a
-pattern OnDocWith opts ev f a <- Listener (V.On ev DocumentTarget opts f _) a where
-  OnDocWith opts ev f a = Listener (V.On ev DocumentTarget opts f (return ())) a
+pattern OnDocWith opts ev f a <- Listener (V.On ev DocumentTarget opts f _ _) a where
+  OnDocWith opts ev f a = Listener (V.On ev DocumentTarget opts f (const (return ())) (return ())) a
 
 pattern OnWin :: HasFeatures a => Txt -> (Evt -> IO ()) -> a -> a
-pattern OnWin ev f a <- Listener (V.On ev WindowTarget _ f _) a where
-  OnWin ev f a = Listener (V.On ev WindowTarget def f (return ())) a
+pattern OnWin ev f a <- Listener (V.On ev WindowTarget _ f _ _) a where
+  OnWin ev f a = Listener (V.On ev WindowTarget def f (const (return ())) (return ())) a
 
 pattern OnWinWith :: HasFeatures a => Options -> Txt -> (Evt -> IO ()) -> a -> a
-pattern OnWinWith opts ev f a <- Listener (V.On ev WindowTarget opts f _) a where
-  OnWinWith opts ev f a = Listener (V.On ev WindowTarget opts f (return ())) a
+pattern OnWinWith opts ev f a <- Listener (V.On ev WindowTarget opts f _ _) a where
+  OnWinWith opts ev f a = Listener (V.On ev WindowTarget opts f (const (return ())) (return ())) a
 
 ----------------------------------------
 -- Window events
@@ -266,15 +267,21 @@ nodefault = Options True False False False
 noprop :: Options
 noprop = Options False True False False
 
-withInput :: forall a. Coercible Txt a => (a -> IO ()) -> (Evt -> IO ())
-withInput f = traverse_ (f . (coerce :: Txt -> a)) . join . fmap (.# "value") . (.# "target") . evtObj
+value :: Evt -> Maybe Txt
+value ev = do
+  t <- target ev
+  t .# "value"
 
--- same as withInput
-withValue :: forall a. Coercible Txt a => (a -> IO ()) -> (Evt -> IO ())
-withValue f = traverse_ (f . (coerce :: Txt -> a)) . join . fmap (.# "value") . (.# "target") . evtObj
+withInput :: (Txt -> IO ()) -> (Evt -> IO ())
+withInput f = f . fromMaybe def . value
+
+checked :: Evt -> Maybe Bool
+checked ev = do
+  t <- target ev
+  t .# "checked"
 
 withChecked :: (Bool -> IO ()) -> (Evt -> IO ())
-withChecked f = traverse_ f . join . fmap (.# "checked") . (.# "target") . evtObj
+withChecked f = f . fromMaybe False . checked
 
 key :: Evt -> Maybe Txt
 key = (.# "key") . evtObj
